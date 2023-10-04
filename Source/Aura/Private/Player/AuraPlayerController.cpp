@@ -5,10 +5,18 @@
 
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
+#include "Interaction/InteractionHintInterface.h"
 
 AAuraPlayerController::AAuraPlayerController()
 {
 	bReplicates = true;
+}
+
+void AAuraPlayerController::PlayerTick(float DeltaTime)
+{
+	Super::PlayerTick(DeltaTime);
+
+	CursorTrace();
 }
 
 void AAuraPlayerController::BeginPlay()
@@ -51,6 +59,49 @@ void AAuraPlayerController::Move(const FInputActionValue& InputActionValue)
 	{
 		ControlledPawn->AddMovementInput(ForwardDirection, InputAxisVector.Y);
 		ControlledPawn->AddMovementInput(RightDirection, InputAxisVector.X);
+	}
+	
+}
+
+void AAuraPlayerController::CursorTrace()
+{
+	FHitResult CursorHit;
+	GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
+
+	if(!CursorHit.bBlockingHit)
+	{
+		return;
+	}
+
+	LastHoveredActor = ThisHoveredActor;
+	ThisHoveredActor = Cast<IInteractionHintInterface>(CursorHit.GetActor());
+	
+	// There was nothing under the cursor in last frame
+	if(LastHoveredActor == nullptr)
+	{
+		// ... but something is now under the cursor.
+		if(ThisHoveredActor != nullptr)
+		{
+			ThisHoveredActor->HighlightActor();
+		}
+	}
+	// Something was under the cursor last frame
+	else
+	{
+		// ... but it is no longer under the cursor.
+		if(ThisHoveredActor == nullptr)
+		{
+			LastHoveredActor->ClearHighlightActor();
+		}
+		else
+		{
+			// ... but a new actor is under the cursor.
+			if(ThisHoveredActor != LastHoveredActor)
+			{
+				LastHoveredActor->ClearHighlightActor();
+				ThisHoveredActor->HighlightActor();
+			}
+		}
 	}
 	
 }
