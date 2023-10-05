@@ -39,6 +39,6 @@ private:
 
 	void CursorTrace();
 
-	IInteractionHintInterface* LastHoveredActor;
-	IInteractionHintInterface* ThisHoveredActor;
+	TObjectPtr<IInteractionHintInterface> LastHoveredActor;
+	TObjectPtr<IInteractionHintInterface> ThisHoveredActor;
 };
