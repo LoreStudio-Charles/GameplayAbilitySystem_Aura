@@ -1,11 +1,10 @@
 // Copyright Charles A. McCown
 
 
-#include "AbilitySystemBlueprintLibrary.h"
 #include "Actor/AuraEffectActor.h"
+#include "AbilitySystemBlueprintLibrary.h"
 
 #include "AbilitySystemComponent.h"
-#include "AbilitySystemInterface.h"
 
 AAuraEffectActor::AAuraEffectActor()
 {
@@ -19,9 +18,9 @@ void AAuraEffectActor::BeginPlay()
 	Super::BeginPlay();
 }
 
-void AAuraEffectActor::ApplyEffectToTarget(AActor* Target, TSubclassOf<UGameplayEffect> GameplayEffectClass) const
+void AAuraEffectActor::ApplyEffectToTarget(AActor* OtherActor, TSubclassOf<UGameplayEffect> GameplayEffectClass) const
 {
-	UAbilitySystemComponent* TargetAbilitySystemComponent = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Target);
+	UAbilitySystemComponent* TargetAbilitySystemComponent = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor);
 
 	if(TargetAbilitySystemComponent == nullptr) return;
 
