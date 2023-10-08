@@ -4,7 +4,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 
 #include "AbilitySystemComponent.h"
-#include "AbilitySystem/AuraAbilitySystemComponent.h"
+#include "Effect/AuraGameplayEffectWrapper.h"
 
 AAuraEffectActor::AAuraEffectActor()
 {
@@ -18,21 +18,21 @@ void AAuraEffectActor::BeginPlay()
 	Super::BeginPlay();
 }
 
-void AAuraEffectActor::ApplyEffectToTarget(AActor* OtherActor, TSubclassOf<UGameplayEffect> GameplayEffectClass)
+void AAuraEffectActor::ApplyEffectToTarget(AActor* OtherActor, UAuraGameplayEffectWrapper* EffectClass)
 {
 	UAbilitySystemComponent* TargetAbilitySystemComponent = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor);
 
 	if(TargetAbilitySystemComponent == nullptr) return;
 
-	check(GameplayEffectClass);
+	check(EffectClass->GameplayEffectClass);
 	FGameplayEffectContextHandle GameplayEffectContextHandle = TargetAbilitySystemComponent->MakeEffectContext();
 	GameplayEffectContextHandle.AddSourceObject(this);
 
-	const FGameplayEffectSpecHandle GameplayEffectSpecHandle = TargetAbilitySystemComponent->MakeOutgoingSpec(GameplayEffectClass, 1.0f, GameplayEffectContextHandle);
+	const FGameplayEffectSpecHandle GameplayEffectSpecHandle = TargetAbilitySystemComponent->MakeOutgoingSpec(EffectClass->GameplayEffectClass, 1.0f, GameplayEffectContextHandle);
 	const FActiveGameplayEffectHandle ActiveEffectHandle = TargetAbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*GameplayEffectSpecHandle.Data.Get());
 
 	const bool bIsInfinite =  GameplayEffectSpecHandle.Data.Get()->Def.Get()->DurationPolicy == EGameplayEffectDurationType::Infinite;
-	if (bIsInfinite && InfiniteEffectRemovalPolicy == EEffectRemovalPolicy::RemoveOnEndOverlap)
+	if (bIsInfinite && EffectClass->EffectRemovalPolicy == EEffectRemovalPolicy::RemoveOnEndOverlap)
 	{
 		ActiveEffectHandles.Add(ActiveEffectHandle, TargetAbilitySystemComponent);
 	}
@@ -40,51 +40,42 @@ void AAuraEffectActor::ApplyEffectToTarget(AActor* OtherActor, TSubclassOf<UGame
 
 void AAuraEffectActor::OnOverlap(AActor* OtherActor)
 {
-	if (InstantEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnOverlap)
+	for (auto& Effect : GameplayEffects)
 	{
-		ApplyEffectToTarget(OtherActor, InstantGameplayEffectClass);
-	}
-	if (DurationEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnOverlap)
-	{
-		ApplyEffectToTarget(OtherActor, DurationGameplayEffectClass);
-	}
-	if (InfiniteEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnOverlap)
-	{
-		ApplyEffectToTarget(OtherActor, InfiniteGameplayEffectClass);
+		if(Effect->EffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnOverlap)
+		{
+			ApplyEffectToTarget(OtherActor, Effect);	
+		}
 	}
 }
 
 void AAuraEffectActor::OnEndOverlap(AActor* OtherActor)
 {
-	if(InstantEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnEndOverlap)
+	for (auto& Effect : GameplayEffects)
 	{
-		ApplyEffectToTarget(OtherActor, InstantGameplayEffectClass);
-	}
-	if(DurationEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnEndOverlap)
-	{
-		ApplyEffectToTarget(OtherActor, DurationGameplayEffectClass);
-	}
-	if(InstantEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnOverlap)
-	{		
-		ApplyEffectToTarget(OtherActor, InfiniteGameplayEffectClass);
-	}
-	if(InfiniteEffectRemovalPolicy == EEffectRemovalPolicy::RemoveOnEndOverlap)
-	{
-		UAbilitySystemComponent* TargetAbilitySystemComponent = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor);
-		if(!IsValid(TargetAbilitySystemComponent)) return;
-
-		TArray<FActiveGameplayEffectHandle> HandlesToRemove;
-		for (auto HandlePair : ActiveEffectHandles)
+		if(Effect->EffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnEndOverlap)
 		{
-			if (TargetAbilitySystemComponent == HandlePair.Value)
-			{
-				TargetAbilitySystemComponent->RemoveActiveGameplayEffect(HandlePair.Key, 1);
-				HandlesToRemove.Add(HandlePair.Key);
-			}
+			ApplyEffectToTarget(OtherActor, Effect);
 		}
-		for(auto Handle: HandlesToRemove)
+
+		if(Effect->EffectRemovalPolicy == EEffectRemovalPolicy::RemoveOnEndOverlap)
 		{
-			ActiveEffectHandles.FindAndRemoveChecked(Handle);
+			UAbilitySystemComponent* TargetAbilitySystemComponent = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor);
+			if(!IsValid(TargetAbilitySystemComponent)) return;
+
+			TArray<FActiveGameplayEffectHandle> HandlesToRemove;
+			for (auto HandlePair : ActiveEffectHandles)
+			{
+				if (TargetAbilitySystemComponent == HandlePair.Value)
+				{
+					TargetAbilitySystemComponent->RemoveActiveGameplayEffect(HandlePair.Key, 1);
+					HandlesToRemove.Add(HandlePair.Key);
+				}
+			}
+			for(auto Handle: HandlesToRemove)
+			{
+				ActiveEffectHandles.FindAndRemoveChecked(Handle);
+			}
 		}
 	}
 }
