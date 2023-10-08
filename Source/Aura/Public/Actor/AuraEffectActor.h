@@ -3,12 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayEffect.h"
 #include "GameFramework/Actor.h"
 #include "GameplayEffectTypes.h"
 #include "AuraEffectActor.generated.h"
 
+class UAuraGameplayEffectWrapper;
+class UAuraGameplayEffect;
 class UAbilitySystemComponent;
-class UGameplayEffect;
 
 UENUM(BlueprintType)
 enum class EEffectApplicationPolicy
@@ -39,36 +41,18 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Applied Effects")
 	bool bDestroyOnEffectRemoval = false;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Applied Effects")
-	TSubclassOf<UGameplayEffect> InstantGameplayEffectClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Applied Effects")
-	EEffectApplicationPolicy InstantEffectApplicationPolicy = EEffectApplicationPolicy::DoNotApply;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Applied Effects")
-	TSubclassOf<UGameplayEffect> DurationGameplayEffectClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Applied Effects")
-	EEffectApplicationPolicy DurationEffectApplicationPolicy = EEffectApplicationPolicy::DoNotApply;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Applied Effects")
-	TSubclassOf<UGameplayEffect> InfiniteGameplayEffectClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Applied Effects")
-	EEffectApplicationPolicy InfiniteEffectApplicationPolicy = EEffectApplicationPolicy::DoNotApply;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Applied Effects")
-	EEffectRemovalPolicy InfiniteEffectRemovalPolicy = EEffectRemovalPolicy::RemoveOnEndOverlap;
-
-	UFUNCTION(BlueprintCallable)
-	void ApplyEffectToTarget(AActor* OtherActor, TSubclassOf<UGameplayEffect> GameplayEffectClass);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, Category = "Applied Effects")
+	TArray<TObjectPtr<UAuraGameplayEffectWrapper>> GameplayEffects;
 
 	UFUNCTION(BlueprintCallable)
 	void OnOverlap(AActor* OtherActor);
 	
 	UFUNCTION(BlueprintCallable)
 	void OnEndOverlap(AActor* OtherActor);
-
+	
 	TMap<FActiveGameplayEffectHandle, UAbilitySystemComponent*> ActiveEffectHandles;
+
+private:
+	void ApplyEffectToTarget(AActor* OtherActor, UAuraGameplayEffectWrapper* EffectClass);
 	
 };
