@@ -10,7 +10,7 @@
 /**
  * 
  */
-UCLASS(Blueprintable, BlueprintType, EditInlineNew)
+UCLASS(Blueprintable, BlueprintType, EditInlineNew, HideDropdown)
 class AURA_API UAuraGameplayEffectWrapper : public UObject
 {
 	GENERATED_BODY()
