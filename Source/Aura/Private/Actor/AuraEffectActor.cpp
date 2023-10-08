@@ -53,9 +53,9 @@ void AAuraEffectActor::OnEndOverlap(AActor* OtherActor)
 {
 	for (auto& Effect : GameplayEffects)
 	{
-		if(Effect->EffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnOverlap)
+		if(Effect->EffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnEndOverlap)
 		{
-			ApplyEffectToTarget(OtherActor, Effect);		
+			ApplyEffectToTarget(OtherActor, Effect);
 		}
 
 		if(Effect->EffectRemovalPolicy == EEffectRemovalPolicy::RemoveOnEndOverlap)
