@@ -2,7 +2,11 @@
 
 
 #include "AbilitySystem/AuraAttributeSet.h"
+
+#include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "GameplayEffectExtension.h"
+#include "GameFramework/Character.h"
 #include "Net/UnrealNetwork.h"
 
 UAuraAttributeSet::UAuraAttributeSet()
@@ -40,13 +44,65 @@ void UAuraAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, 
 	if(Attribute == GetMaxHealthAttribute())
 	{
 		NewValue = FMath::Max(0.f, NewValue);
-		SetHealth(FMath::Clamp(GetHealth(), 0.f, NewValue));
 	}
 
 	if(Attribute == GetMaxManaAttribute())
 	{
 		NewValue = FMath::Max(0.f, NewValue);
-		SetHealth(FMath::Clamp(GetMana(), 0.f, NewValue));
+	}
+}
+
+void UAuraAttributeSet::SetEffectProperties(const FGameplayEffectModCallbackData& Data,
+	FEffectProperties& Properties)
+{
+	Properties.ContextHandle = Data.EffectSpec.GetContext();
+	Properties.Source.AbilitySystemComponent = Properties.ContextHandle.GetOriginalInstigatorAbilitySystemComponent();
+
+	if(IsValid(Properties.Source.AbilitySystemComponent) &&
+		Properties.Source.AbilitySystemComponent->AbilityActorInfo.IsValid() &&
+		Properties.Source.AbilitySystemComponent->AbilityActorInfo->AvatarActor.IsValid())
+	{
+		Properties.Source.AvatarActor = Properties.Source.AbilitySystemComponent->AbilityActorInfo->AvatarActor.Get();
+		Properties.Source.Controller = Properties.Source.AbilitySystemComponent->AbilityActorInfo->PlayerController.Get();
+		if(Properties.Source.Controller == nullptr &&
+			Properties.Source.AvatarActor != nullptr)
+		{
+			if(APawn* Pawn = Cast<APawn>(Properties.Source.AvatarActor))
+			{
+				Properties.Source.Controller = Pawn->GetController();
+			}
+		}
+		if(Properties.Source.Controller)
+		{
+			Properties.Source.Character = Cast<ACharacter>(Properties.Source.Controller->GetPawn());
+		}
+	}
+	
+	if(Data.Target.AbilityActorInfo.IsValid() &&
+		Data.Target.AbilityActorInfo->AvatarActor.IsValid())
+	{
+		Properties.Target.AvatarActor = Data.Target.AbilityActorInfo->AvatarActor.Get();
+		Properties.Target.Controller = Data.Target.AbilityActorInfo->PlayerController.Get();
+		Properties.Target.Character = Cast<ACharacter>(Properties.Target.AvatarActor);
+		Properties.Target.AbilitySystemComponent = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Properties.Target.AvatarActor);
+	}
+}
+
+void UAuraAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
+{
+	Super::PostGameplayEffectExecute(Data);
+
+	FEffectProperties EffectProperties;
+	SetEffectProperties(Data, EffectProperties);
+	
+	if(Data.EvaluatedData.Attribute == GetMaxHealthAttribute())
+	{
+		SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
+	}
+	
+	if(Data.EvaluatedData.Attribute == GetMaxManaAttribute())
+	{
+		SetMana(FMath::Clamp(GetMana(), 0.f, GetMaxMana()));
 	}
 }
 
